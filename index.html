@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Comparador de Escalas</title>
+  <style>
+    @media print {
+      form, h1, button {
+        display: none;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-size: 8px;
+      }
+      table {
+        width: 100%;
+        font-size: 8px;
+        border-collapse: collapse;
+      }
+      td, th {
+        padding: 2px 4px;
+        border: 1px solid #ccc;
+        vertical-align: top;
+      }
+      .escala-bloco span {
+        font-size: 7.5px;
+      }
+      .sem-escala {
+        font-size: 7.5px;
+        color: #999;
+      }
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .sem-escala {
+      color: gray;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>Comparar Escalas de Tripulantes</h1>
+
+  <form id="formulario" enctype="multipart/form-data">
+    <label>Escala 1 (PDF):</label><br>
+    <input type="file" name="pdf1" accept="application/pdf" required><br><br>
+
+    <label>Escala 2 (PDF):</label><br>
+    <input type="file" name="pdf2" accept="application/pdf" required><br><br>
+
+    <button type="submit">Comparar</button>
+  </form>
+
+  <hr>
+
+  <div id="resultado"></div>
+
+  <button onclick="window.print()">Imprimir ou Salvar como PDF</button>
+
+  <script>
+    const form = document.getElementById('formulario');
+    const resultado = document.getElementById('resultado');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const resposta = await fetch('/comparar', {
+        method: 'POST',
+        body: formData
+      });
+
+      const dados = await resposta.json();
+      console.log('Dados recebidos do servidor:', dados);
+
+      if (!dados.escalas || !Array.isArray(dados.escalas)) {
+        resultado.innerHTML = '<p>Não foi possível exibir as escalas.</p>';
+        return;
+      }
+
+      let html = '<table>';
+      html += `
+        <tr>
+          <th>Data</th>
+          <th>${dados.nome1 || 'Escala 1'}</th>
+          <th>${dados.nome2 || 'Escala 2'}</th>
+        </tr>
+      `;
+
+      dados.escalas.forEach(item => {
+        html += `
+          <tr>
+            <td>${item.data}</td>
+            <td>${formatarEscala(item.escala1)}</td>
+            <td>${formatarEscala(item.escala2)}</td>
+          </tr>
+        `;
+      });
+
+      html += '</table>';
+      resultado.innerHTML = html;
+    });
+
+    function formatarEscala(escala) {
+      if (!escala) return '<span class="sem-escala">Sem escala</span>';
+
+      return escala
+        .split('|')
+        .map(item => {
+          let texto = item.trim();
+          texto = texto.replace(/trainee/gi, '').trim();
+          texto = texto.replace(/Flight Time:.*$/i, '').trim();
+
+          const matchApresentacao = texto.match(/^(Apresentação|Release|Hotel)(\d{2}:\d{2}\s*-\s*\d{2}:\d{2}(?:\s*\+?\d+)?)(.*)$/);
+          if (matchApresentacao) {
+            return `
+              <div style="display: grid; grid-template-columns: 100px 110px 1fr; gap: 4px;">
+                <span>${matchApresentacao[1]}</span>
+                <span>${matchApresentacao[2]}</span>
+                <span>${matchApresentacao[3].trim()}</span>
+              </div>
+            `;
+          }
+
+          const matchVoo = texto.match(/^(AD\s?\d+).*?(\d{2}:\d{2}\s*-\s*\d{2}:\d{2}).*?([A-Z]{3}\s*-\s*[A-Z]{3})/);
+          if (matchVoo) {
+            return `
+              <div style="display: grid; grid-template-columns: 100px 110px 1fr; gap: 4px;">
+                <span>${matchVoo[1]}</span>
+                <span>${matchVoo[2]}</span>
+                <span>${matchVoo[3]}</span>
+              </div>
+            `;
+          }
+
+          const matchGround = texto.match(/^(Ground\s?\(.*?\))(\d{2}:\d{2}\s*-\s*\d{2}:\d{2})([A-Z]{3}.*)$/);
+          if (matchGround) {
+            return `
+              <div style="display: grid; grid-template-columns: 100px 110px 1fr; gap: 4px;">
+                <span>${matchGround[1]}</span>
+                <span>${matchGround[2]}</span>
+                <span>${matchGround[3]}</span>
+              </div>
+            `;
+          }
+
+          return `<div style="margin: 5px 0;">${texto}</div>`;
+        })
+        .join('');
+    }
+  </script>
+</body>
+</html>
