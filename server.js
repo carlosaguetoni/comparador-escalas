@@ -4,7 +4,7 @@ const pdf = require('pdf-parse');
 const path = require('path');
 
 const app = express();
-const PORT = 3333;
+const PORT = process.env.PORT || 3333;
 
 app.use(fileUpload());
 app.use(express.static('public'));
