@@ -38,7 +38,35 @@ app.post('/comparar', async (req, res) => {
 
     const mesReferencia = extrairMes(dados1) || extrairMes(dados2);
 
-    // Junta todas as datas, mas apenas do mês selecionado
+function extrairMes(dados1, dados2) {
+  const primeiro = (dados1 && dados1.length > 0) ? dados1[0] :
+                   (dados2 && dados2.length > 0) ? dados2[0] :
+                   null;
+  return primeiro ? primeiro.data.split('/')[1] : null;
+}
+
+app.post('/comparar', async (req, res) => {
+  try {
+    if (!req.files || !req.files.pdf1 || !req.files.pdf2) {
+      return res.status(400).json({ mensagem: 'Ambos os arquivos PDF são obrigatórios.' });
+    }
+
+    const { pdf1, pdf2 } = req.files;
+    const texto1 = (await pdf(pdf1.data)).text;
+    const texto2 = (await pdf(pdf2.data)).text;
+
+    const nome1 = extrairNome(texto1);
+    const nome2 = extrairNome(texto2);
+
+    const dados1 = extrairDias(texto1);
+    const dados2 = extrairDias(texto2) || [];
+
+    const mesReferencia = extrairMes(dados1, dados2);
+
+    if (!mesReferencia) {
+      return res.json({ escalas: [], nome1, nome2 });
+    }
+
     const todasAsDatas = [...new Set([
       ...dados1.map(d => d.data),
       ...dados2.map(d => d.data)
@@ -59,6 +87,7 @@ app.post('/comparar', async (req, res) => {
     res.status(500).json({ mensagem: 'Erro ao processar os arquivos PDF.' });
   }
 });
+
 
 // Função para extrair os dias e atividades
 function extrairDias(texto) {
