@@ -101,18 +101,15 @@ app.post('/comparar', async (req, res) => {
     const dados1 = extrairDias(texto1);
     const dados2 = extrairDias(texto2) || [];
 
-    const mesReferencia = extrairMes(dados1, dados2);
-
-    if (!mesReferencia) {
-      return res.json({ escalas: [], nome1, nome2 });
-    }
-
+    // Junta todas as datas dos dois arquivos
     const todasAsDatas = [...new Set([
       ...dados1.map(d => d.data),
       ...dados2.map(d => d.data)
-    ])]
-      .filter(data => data.split('/')[1] === mesReferencia)
-      .sort();
+    ])].sort((a, b) => {
+      const [diaA, mesA, anoA] = a.split('/').map(Number);
+      const [diaB, mesB, anoB] = b.split('/').map(Number);
+      return new Date(anoA, mesA - 1, diaA) - new Date(anoB, mesB - 1, diaB);
+    });
 
     const resultado = todasAsDatas.map(data => {
       const e1 = dados1.find(d => d.data === data)?.atividade || '';
@@ -127,6 +124,7 @@ app.post('/comparar', async (req, res) => {
     res.status(500).json({ mensagem: 'Erro ao processar os arquivos PDF.' });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
