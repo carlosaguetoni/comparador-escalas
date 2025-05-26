@@ -89,14 +89,19 @@
         return;
       }
 
-      let html = '<table>';
-      html += `
-        <tr>
-          <th>Data</th>
-          <th>${dados.nome1 || 'Escala 1'}</th>
-          <th>${dados.nome2 || 'Escala 2'}</th>
-        </tr>
-      `;
+      let html = `
+  <p><strong>${dados.nome1}</strong>: ${dados.flightTotal1} &nbsp; | &nbsp; 
+  <strong>${dados.nome2}</strong>: ${dados.flightTotal2}</strong></p>
+  <table>
+`;
+html += `
+  <tr>
+    <th>Data</th>
+    <th>${dados.nome1 || 'Escala 1'}</th>
+    <th>${dados.nome2 || 'Escala 2'}</th>
+  </tr>
+`;
+
 
       dados.escalas.forEach(item => {
         html += `
