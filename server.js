@@ -28,12 +28,12 @@ function extrairPeriodo(texto) {
   const linha = texto.split('\n').find(l => l.includes('Escala Summary')) || '';
   console.log('Linha do cabeçalho encontrada:', linha);
 
-  const match = linha.match(/.+Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+2025/i);
+  const match = linha.match(/Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]{3})\s*-\s*(\d{1,2})\s+([A-Za-z]{3})\s+2025/i);
   if (match) {
     const mesMap = {
-      january: '01', february: '02', march: '03', april: '04',
-      may: '05', june: '06', july: '07', august: '08',
-      september: '09', october: '10', november: '11', december: '12'
+      jan: '01', feb: '02', mar: '03', apr: '04',
+      may: '05', jun: '06', jul: '07', aug: '08',
+      sep: '09', oct: '10', nov: '11', dec: '12'
     };
     const mesExtraido = mesMap[match[2].toLowerCase()] || null; // mês do primeiro dia
     console.log('mesReferencia extraído:', mesExtraido);
