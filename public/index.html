@@ -23,6 +23,13 @@
         border: 1px solid #ccc;
         vertical-align: top;
       }
+      .escala-bloco span {
+        font-size: 7.5px;
+      }
+      .sem-escala {
+        font-size: 7.5px;
+        color: #999;
+      }
     }
 
     table {
@@ -40,6 +47,9 @@
     .sem-escala {
       color: gray;
       font-style: italic;
+    }
+    .folga {
+      background-color: #e0e0e0;
     }
   </style>
 </head>
@@ -77,46 +87,31 @@
       const dados = await resposta.json();
       console.log('Dados recebidos do servidor:', dados);
 
-      if (!dados.escalas || !Array.isArray(dados.escalas) || dados.escalas.length === 0) {
+      if (!dados.escalas || !Array.isArray(dados.escalas)) {
         resultado.innerHTML = '<p>Não foi possível exibir as escalas.</p>';
         return;
       }
 
-      const mesesMap = {
-        '01': 'Janeiro',
-        '02': 'Fevereiro',
-        '03': 'Março',
-        '04': 'Abril',
-        '05': 'Maio',
-        '06': 'Junho',
-        '07': 'Julho',
-        '08': 'Agosto',
-        '09': 'Setembro',
-        '10': 'Outubro',
-        '11': 'Novembro',
-        '12': 'Dezembro'
-      };
-
-      let mesExibido = mesesMap[dados.mesReferencia] || 'Mês';
-
-      let html = `
-        <p><strong>${dados.nome1} - ${mesExibido}</strong>: ${dados.flightTotal1} &nbsp; | &nbsp; 
-        <strong>${dados.nome2} - ${mesExibido}</strong>: ${dados.flightTotal2}</strong></p>
-        <table>
-      `;
-
+      let html = '<table>';
       html += `
         <tr>
           <th>Data</th>
-          <th>${dados.nome1 || 'Escala 1'} - ${mesExibido}</th>
-          <th>${dados.nome2 || 'Escala 2'} - ${mesExibido}</th>
+          <th>${dados.nome1 || 'Escala 1'}</th>
+          <th>${dados.nome2 || 'Escala 2'}</th>
         </tr>
       `;
 
       dados.escalas.forEach(item => {
+        const diaSemana = getDiaSemana(item.data);
+        const textoEscala1 = item.escala1.toLowerCase();
+        const textoEscala2 = item.escala2.toLowerCase();
+
+        const ambosFolga = textoEscala1.includes('off') && textoEscala2.includes('off');
+        const rowClass = ambosFolga ? 'folga' : '';
+
         html += `
-          <tr>
-            <td>${item.data}</td>
+          <tr class="${rowClass}">
+            <td>${diaSemana}, ${item.data}</td>
             <td>${formatarEscala(item.escala1)}</td>
             <td>${formatarEscala(item.escala2)}</td>
           </tr>
@@ -126,6 +121,13 @@
       html += '</table>';
       resultado.innerHTML = html;
     });
+
+    function getDiaSemana(data) {
+      const [dia, mes, ano] = data.split('/').map(Number);
+      const dateObj = new Date(ano, mes - 1, dia);
+      const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      return dias[dateObj.getDay()];
+    }
 
     function formatarEscala(escala) {
       if (!escala) return '<span class="sem-escala">Sem escala</span>';
