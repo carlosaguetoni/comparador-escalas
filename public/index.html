@@ -77,7 +77,7 @@
       const dados = await resposta.json();
       console.log('Dados recebidos do servidor:', dados);
 
-      if (!dados.escalas || !Array.isArray(dados.escalas)) {
+      if (!dados.escalas || !Array.isArray(dados.escalas) || dados.escalas.length === 0) {
         resultado.innerHTML = '<p>Não foi possível exibir as escalas.</p>';
         return;
       }
