@@ -14,25 +14,31 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Função para extrair nome do tripulante
+// Função para extrair nome
 function extrairNome(texto) {
   const linha = texto.split('\n')[0];
   const match = linha.match(/^(.+?)\s+Escala Summary/i);
-  return match ? match[1].trim() : 'Escala';
+  const nome = match ? match[1].trim() : 'Escala';
+  console.log('nome extraído:', nome);
+  return nome;
 }
 
 // Função para extrair o mês do primeiro dia a partir do cabeçalho
 function extrairPeriodo(texto) {
   const linha = texto.split('\n')[0];
-  const match = linha.match(/Escala Summary,?\s+(\d{1,2})\s+([A-Za-z]+)\s+-\s+(\d{1,2})\s+([A-Za-z]+)\s+2025/i);
+  console.log('Linha do cabeçalho:', linha);
+  const match = linha.match(/Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+2025/i);
   if (match) {
     const mesMap = {
       january: '01', february: '02', march: '03', april: '04',
       may: '05', june: '06', july: '07', august: '08',
       september: '09', october: '10', november: '11', december: '12'
     };
-    return mesMap[match[2].toLowerCase()] || null; // pega o mês do primeiro dia
+    const mesExtraido = mesMap[match[2].toLowerCase()] || null; // mês do primeiro dia
+    console.log('mesReferencia extraído:', mesExtraido);
+    return mesExtraido;
   }
+  console.log('mesReferencia extraído: null');
   return null;
 }
 
@@ -68,6 +74,7 @@ function extrairDias(texto) {
 
   if (diaAtual) dias.push(diaAtual);
   dias.forEach(d => d.atividade = d.atividade.replace(/\s\|\s$/, ''));
+  console.log('Dias extraídos:', dias.map(d => d.data));
   return dias;
 }
 
@@ -105,6 +112,7 @@ app.post('/comparar', async (req, res) => {
     const mesReferencia = extrairPeriodo(texto1) || extrairPeriodo(texto2);
 
     if (!mesReferencia) {
+      console.log('⚠ Nenhum mês identificado, retornando lista vazia.');
       return res.json({ escalas: [], nome1, nome2, mesReferencia });
     }
 
@@ -128,10 +136,11 @@ app.post('/comparar', async (req, res) => {
     const flightTotal1 = somarHoras(texto1);
     const flightTotal2 = somarHoras(texto2);
 
+    console.log('✅ Resumo final enviado ao frontend');
     res.json({ escalas: resultado, nome1, nome2, mesReferencia, flightTotal1, flightTotal2 });
 
   } catch (erro) {
-    console.error('Erro ao comparar PDFs:', erro);
+    console.error('❌ Erro ao comparar PDFs:', erro);
     res.status(500).json({ mensagem: 'Erro ao processar os arquivos PDF.' });
   }
 });
