@@ -122,13 +122,7 @@ app.post('/comparar', async (req, res) => {
       return { data, escala1: e1, escala2: e2 };
     });
 
-    res.json({
-      escalas: resultado,
-      nome1,
-      nome2,
-      flightTotal1: `${flightHours1}h${flightMinutes1}min`,
-      flightTotal2: `${flightHours2}h${flightMinutes2}min`
-    });
+res.json({ escalas: resultado, nome1, nome2, mesReferencia, flightTotal1, flightTotal2 });
 
   } catch (erro) {
     console.error('Erro ao comparar PDFs:', erro);
