@@ -28,7 +28,7 @@ function extrairPeriodo(texto) {
   const linha = texto.split('\n').find(l => l.includes('Escala Summary')) || '';
   console.log('Linha do cabeçalho encontrada:', linha);
 
-  const match = linha.match(/Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+2025/i);
+  const match = linha.match(/.+Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+2025/i);
   if (match) {
     const mesMap = {
       january: '01', february: '02', march: '03', april: '04',
