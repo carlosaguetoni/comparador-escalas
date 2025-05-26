@@ -14,7 +14,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Função para extrair apenas o primeiro nome e mês
 function extrairNome(texto) {
   const linhas = texto.split('\n');
   const linhaUtil = linhas.find(l => l.trim() !== '');
@@ -39,7 +38,6 @@ function extrairNome(texto) {
   return 'Escala';
 }
 
-// Função para extrair os dias e atividades
 function extrairDias(texto) {
   const linhas = texto.split('\n');
   const regexData = /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s+(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)/i;
@@ -76,15 +74,6 @@ function extrairDias(texto) {
   return dias;
 }
 
-// Função para pegar o mês de referência
-function extrairMes(dados1, dados2) {
-  const primeiro = (dados1 && dados1.length > 0) ? dados1[0] :
-                   (dados2 && dados2.length > 0) ? dados2[0] :
-                   null;
-  return primeiro ? primeiro.data.split('/')[1] : null;
-}
-
-// Rota principal
 app.post('/comparar', async (req, res) => {
   try {
     if (!req.files || !req.files.pdf1 || !req.files.pdf2) {
@@ -101,7 +90,6 @@ app.post('/comparar', async (req, res) => {
     const dados1 = extrairDias(texto1);
     const dados2 = extrairDias(texto2) || [];
 
-    // Junta todas as datas dos dois arquivos
     const todasAsDatas = [...new Set([
       ...dados1.map(d => d.data),
       ...dados2.map(d => d.data)
@@ -111,20 +99,42 @@ app.post('/comparar', async (req, res) => {
       return new Date(anoA, mesA - 1, diaA) - new Date(anoB, mesB - 1, diaB);
     });
 
+    // Somar Flight Time 1
+    const flightTime1 = (texto1.match(/Flight Time:\s*(\d{2}):(\d{2})/g) || []).reduce((sum, time) => {
+      const [h, m] = time.match(/\d{2}/g).map(Number);
+      return sum + h * 60 + m;
+    }, 0);
+
+    // Somar Flight Time 2
+    const flightTime2 = (texto2.match(/Flight Time:\s*(\d{2}):(\d{2})/g) || []).reduce((sum, time) => {
+      const [h, m] = time.match(/\d{2}/g).map(Number);
+      return sum + h * 60 + m;
+    }, 0);
+
+    const flightHours1 = Math.floor(flightTime1 / 60);
+    const flightMinutes1 = flightTime1 % 60;
+    const flightHours2 = Math.floor(flightTime2 / 60);
+    const flightMinutes2 = flightTime2 % 60;
+
     const resultado = todasAsDatas.map(data => {
       const e1 = dados1.find(d => d.data === data)?.atividade || '';
       const e2 = dados2.find(d => d.data === data)?.atividade || '';
       return { data, escala1: e1, escala2: e2 };
     });
 
-    res.json({ escalas: resultado, nome1, nome2 });
+    res.json({
+      escalas: resultado,
+      nome1,
+      nome2,
+      flightTotal1: `${flightHours1}h${flightMinutes1}min`,
+      flightTotal2: `${flightHours2}h${flightMinutes2}min`
+    });
 
   } catch (erro) {
     console.error('Erro ao comparar PDFs:', erro);
     res.status(500).json({ mensagem: 'Erro ao processar os arquivos PDF.' });
   }
 });
-
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
