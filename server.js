@@ -14,11 +14,26 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Função para extrair nome
+// Função para extrair nome do tripulante
 function extrairNome(texto) {
   const linha = texto.split('\n')[0];
   const match = linha.match(/^(.+?)\s+Escala Summary/i);
   return match ? match[1].trim() : 'Escala';
+}
+
+// Função para extrair o mês do primeiro dia a partir do cabeçalho
+function extrairPeriodo(texto) {
+  const linha = texto.split('\n')[0];
+  const match = linha.match(/Escala Summary,?\s+(\d{1,2})\s+([A-Za-z]+)\s+-\s+(\d{1,2})\s+([A-Za-z]+)\s+2025/i);
+  if (match) {
+    const mesMap = {
+      january: '01', february: '02', march: '03', april: '04',
+      may: '05', june: '06', july: '07', august: '08',
+      september: '09', october: '10', november: '11', december: '12'
+    };
+    return mesMap[match[2].toLowerCase()] || null; // pega o mês do primeiro dia
+  }
+  return null;
 }
 
 // Função para extrair dias e atividades
@@ -56,14 +71,6 @@ function extrairDias(texto) {
   return dias;
 }
 
-// Função para extrair o mês principal
-function extrairMes(dados1, dados2) {
-  const primeiro = (dados1 && dados1.length > 0) ? dados1[0] :
-                   (dados2 && dados2.length > 0) ? dados2[0] :
-                   null;
-  return primeiro ? primeiro.data.split('/')[1] : null;
-}
-
 // Função para somar Flight Time
 function somarHoras(texto) {
   const regex = /Flight Time:\s*(\d{2}):(\d{2})/g;
@@ -79,7 +86,6 @@ function somarHoras(texto) {
   return `${totalHoras}h${restoMin}min`;
 }
 
-// Rota principal
 app.post('/comparar', async (req, res) => {
   try {
     if (!req.files || !req.files.pdf1 || !req.files.pdf2) {
@@ -96,7 +102,7 @@ app.post('/comparar', async (req, res) => {
     const dados1 = extrairDias(texto1);
     const dados2 = extrairDias(texto2) || [];
 
-    const mesReferencia = extrairMes(dados1, dados2);
+    const mesReferencia = extrairPeriodo(texto1) || extrairPeriodo(texto2);
 
     if (!mesReferencia) {
       return res.json({ escalas: [], nome1, nome2, mesReferencia });
@@ -107,7 +113,11 @@ app.post('/comparar', async (req, res) => {
       ...dados2.map(d => d.data)
     ])]
       .filter(data => data.split('/')[1] === mesReferencia)
-      .sort();
+      .sort((a, b) => {
+        const [diaA, mesA, anoA] = a.split('/').map(Number);
+        const [diaB, mesB, anoB] = b.split('/').map(Number);
+        return new Date(anoA, mesA - 1, diaA) - new Date(anoB, mesB - 1, diaB);
+      });
 
     const resultado = todasAsDatas.map(data => {
       const e1 = dados1.find(d => d.data === data)?.atividade || '';
