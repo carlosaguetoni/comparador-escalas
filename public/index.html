@@ -23,13 +23,6 @@
         border: 1px solid #ccc;
         vertical-align: top;
       }
-      .escala-bloco span {
-        font-size: 7.5px;
-      }
-      .sem-escala {
-        font-size: 7.5px;
-        color: #999;
-      }
     }
 
     table {
@@ -89,35 +82,36 @@
         return;
       }
 
-     const mesesMap = {
-  '01': 'Janeiro',
-  '02': 'Fevereiro',
-  '03': 'Março',
-  '04': 'Abril',
-  '05': 'Maio',
-  '06': 'Junho',
-  '07': 'Julho',
-  '08': 'Agosto',
-  '09': 'Setembro',
-  '10': 'Outubro',
-  '11': 'Novembro',
-  '12': 'Dezembro'
-};
+      const mesesMap = {
+        '01': 'Janeiro',
+        '02': 'Fevereiro',
+        '03': 'Março',
+        '04': 'Abril',
+        '05': 'Maio',
+        '06': 'Junho',
+        '07': 'Julho',
+        '08': 'Agosto',
+        '09': 'Setembro',
+        '10': 'Outubro',
+        '11': 'Novembro',
+        '12': 'Dezembro'
+      };
 
-let mesExibido = mesesMap[dados.mesReferencia] || 'Mês';
+      let mesExibido = mesesMap[dados.mesReferencia] || 'Mês';
 
-let html = `
-  <p><strong>${dados.nome1} - ${mesExibido}</strong>: ${dados.flightTotal1} &nbsp; | &nbsp; 
-  <strong>${dados.nome2} - ${mesExibido}</strong>: ${dados.flightTotal2}</strong></p>
-  <table>
-`;
-html += `
-  <tr>
-    <th>Data</th>
-    <th>${dados.nome1 || 'Escala 1'} - ${mesExibido}</th>
-    <th>${dados.nome2 || 'Escala 2'} - ${mesExibido}</th>
-  </tr>
-`;
+      let html = `
+        <p><strong>${dados.nome1} - ${mesExibido}</strong>: ${dados.flightTotal1} &nbsp; | &nbsp; 
+        <strong>${dados.nome2} - ${mesExibido}</strong>: ${dados.flightTotal2}</strong></p>
+        <table>
+      `;
+
+      html += `
+        <tr>
+          <th>Data</th>
+          <th>${dados.nome1 || 'Escala 1'} - ${mesExibido}</th>
+          <th>${dados.nome2 || 'Escala 2'} - ${mesExibido}</th>
+        </tr>
+      `;
 
       dados.escalas.forEach(item => {
         html += `
