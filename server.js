@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
 
 // Função para extrair nome
 function extrairNome(texto) {
-  const linha = texto.split('\n')[0];
+  const linha = texto.split('\n').find(l => l.includes('Escala Summary')) || '';
   const match = linha.match(/^(.+?)\s+Escala Summary/i);
   const nome = match ? match[1].trim() : 'Escala';
   console.log('nome extraído:', nome);
@@ -25,8 +25,9 @@ function extrairNome(texto) {
 
 // Função para extrair o mês do primeiro dia a partir do cabeçalho
 function extrairPeriodo(texto) {
-  const linha = texto.split('\n')[0];
-  console.log('Linha do cabeçalho:', linha);
+  const linha = texto.split('\n').find(l => l.includes('Escala Summary')) || '';
+  console.log('Linha do cabeçalho encontrada:', linha);
+
   const match = linha.match(/Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+2025/i);
   if (match) {
     const mesMap = {
