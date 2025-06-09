@@ -28,7 +28,7 @@ function extrairPeriodo(texto) {
   const linha = texto.split('\n').find(l => l.includes('Escala Summary')) || '';
   console.log('Linha do cabeçalho encontrada:', linha);
 
-  const match = linha.match(/Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]{3})\s*-\s*(\d{1,2})\s+([A-Za-z]{3})\s+2025/i);
+  const match = linha.match(/Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]{3})\s*-\s*(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/i);
   if (match) {
     const mesMap = {
       jan: '01', feb: '02', mar: '03', apr: '04',
@@ -36,15 +36,16 @@ function extrairPeriodo(texto) {
       sep: '09', oct: '10', nov: '11', dec: '12'
     };
     const mesExtraido = mesMap[match[2].toLowerCase()] || null; // mês do primeiro dia
-    console.log('mesReferencia extraído:', mesExtraido);
-    return mesExtraido;
+    const anoExtraido = match[5] || null;
+    console.log('mesReferencia extraído:', mesExtraido, 'ano:', anoExtraido);
+    return { mes: mesExtraido, ano: anoExtraido };
   }
   console.log('mesReferencia extraído: null');
-  return null;
+  return { mes: null, ano: null };
 }
 
 // Função para extrair dias e atividades
-function extrairDias(texto) {
+function extrairDias(texto, anoPadrao = new Date().getFullYear().toString()) {
   const linhas = texto.split('\n');
   const regexData = /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s+(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)/i;
   const dias = [];
@@ -64,7 +65,7 @@ function extrairDias(texto) {
         September: '09', October: '10', November: '11', December: '12'
       };
       const mes = mesMap[match[3]];
-      const data = `${dia}/${mes}/2025`;
+      const data = `${dia}/${mes}/${anoPadrao}`;
 
       diaAtual = { data, atividade: '' };
       acumulando = true;
@@ -107,10 +108,16 @@ app.post('/comparar', async (req, res) => {
     const nome1 = extrairNome(texto1);
     const nome2 = extrairNome(texto2);
 
-    const dados1 = extrairDias(texto1);
-    const dados2 = extrairDias(texto2) || [];
+    const periodo1 = extrairPeriodo(texto1);
+    const periodo2 = extrairPeriodo(texto2);
 
-    const mesReferencia = extrairPeriodo(texto1) || extrairPeriodo(texto2);
+    const ano1 = periodo1.ano || new Date().getFullYear().toString();
+    const ano2 = periodo2.ano || new Date().getFullYear().toString();
+
+    const dados1 = extrairDias(texto1, ano1);
+    const dados2 = extrairDias(texto2, ano2) || [];
+
+    const mesReferencia = periodo1.mes || periodo2.mes;
 
     if (!mesReferencia) {
       console.log('⚠ Nenhum mês identificado, retornando lista vazia.');
