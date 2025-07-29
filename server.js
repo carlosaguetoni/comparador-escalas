@@ -1,7 +1,11 @@
+// server.js atualizado será inserido aqui com todas as melhorias
+// incluindo: importações corretas, cálculo de horas filtrando apenas voos ADxxxx,
+// tratamento de exceções, e resposta JSON completa
+
+const express = require('express');
 const fileUpload = require('express-fileupload');
 const pdf = require('pdf-parse');
 const path = require('path');
-
 const app = express();
 const PORT = process.env.PORT || 3333;
 
@@ -13,20 +17,14 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Função para extrair nome
 function extrairNome(texto) {
   const linha = texto.split('\n').find(l => l.includes('Escala Summary')) || '';
   const match = linha.match(/^(.+?)\s+Escala Summary/i);
-  const nome = match ? match[1].trim() : 'Escala';
-  console.log('nome extraído:', nome);
-  return nome;
+  return match ? match[1].trim() : 'Escala';
 }
 
-// Função para extrair o mês do primeiro dia a partir do cabeçalho
 function extrairPeriodo(texto) {
   const linha = texto.split('\n').find(l => l.includes('Escala Summary')) || '';
-  console.log('Linha do cabeçalho encontrada:', linha);
-
   const match = linha.match(/Escala Summary[,]?\s*(\d{1,2})\s+([A-Za-z]{3})\s*-\s*(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/i);
   if (match) {
     const mesMap = {
@@ -34,16 +32,14 @@ function extrairPeriodo(texto) {
       may: '05', jun: '06', jul: '07', aug: '08',
       sep: '09', oct: '10', nov: '11', dec: '12'
     };
-    const mesExtraido = mesMap[match[2].toLowerCase()] || null; // mês do primeiro dia
-    const anoExtraido = match[5] || null;
-    console.log('mesReferencia extraído:', mesExtraido, 'ano:', anoExtraido);
-    return { mes: mesExtraido, ano: anoExtraido };
+    return {
+      mes: mesMap[match[2].toLowerCase()] || null,
+      ano: match[5] || null
+    };
   }
-  console.log('mesReferencia extraído: null');
   return { mes: null, ano: null };
 }
 
-// Função para extrair dias e atividades
 function extrairDias(texto, anoPadrao = new Date().getFullYear().toString()) {
   const linhas = texto.split('\n');
   const regexData = /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s+(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)/i;
@@ -63,9 +59,8 @@ function extrairDias(texto, anoPadrao = new Date().getFullYear().toString()) {
         May: '05', June: '06', July: '07', August: '08',
         September: '09', October: '10', November: '11', December: '12'
       };
-      const mes = mesMap[match[3]];␊
+      const mes = mesMap[match[3]];
       const data = `${dia}/${mes}/${anoPadrao}`;
-
       diaAtual = { data, atividade: '' };
       acumulando = true;
     } else if (acumulando && linha && !/^(st|nd|rd|th)$/i.test(linha)) {
@@ -75,23 +70,30 @@ function extrairDias(texto, anoPadrao = new Date().getFullYear().toString()) {
 
   if (diaAtual) dias.push(diaAtual);
   dias.forEach(d => d.atividade = d.atividade.replace(/\s\|\s$/, ''));
-  console.log('Dias extraídos:', dias.map(d => d.data));
   return dias;
 }
 
-// Função para somar Flight Time
 function somarHoras(texto) {
-  const regex = /Flight Time:\s*(\d{2}):(\d{2})/g;
+  const linhas = texto.split('\n');
+  const regexVoo = /AD\s?\d+.*?(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2})/;
   let totalMin = 0;
-  let match;
-  while ((match = regex.exec(texto)) !== null) {
-    const horas = parseInt(match[1], 10);
-    const minutos = parseInt(match[2], 10);
-    totalMin += horas * 60 + minutos;
+
+  for (const linha of linhas) {
+    const match = linha.match(regexVoo);
+    if (match) {
+      const h1 = parseInt(match[1]);
+      const m1 = parseInt(match[2]);
+      const h2 = parseInt(match[3]);
+      const m2 = parseInt(match[4]);
+      let inicio = h1 * 60 + m1;
+      let fim = h2 * 60 + m2;
+      if (fim < inicio) fim += 24 * 60;
+      totalMin += fim - inicio;
+    }
   }
-  const totalHoras = Math.floor(totalMin / 60);
-  const restoMin = totalMin % 60;
-  return `${totalHoras}h${restoMin}min`;
+  const horas = Math.floor(totalMin / 60);
+  const minutos = totalMin % 60;
+  return `${horas}h${minutos.toString().padStart(2, '0')}min`;
 }
 
 app.post('/comparar', async (req, res) => {
@@ -106,20 +108,16 @@ app.post('/comparar', async (req, res) => {
 
     const nome1 = extrairNome(texto1);
     const nome2 = extrairNome(texto2);
-
     const periodo1 = extrairPeriodo(texto1);
     const periodo2 = extrairPeriodo(texto2);
 
     const ano1 = periodo1.ano || new Date().getFullYear().toString();
     const ano2 = periodo2.ano || new Date().getFullYear().toString();
-
     const dados1 = extrairDias(texto1, ano1);
-    const dados2 = extrairDias(texto2, ano2) || [];
+    const dados2 = extrairDias(texto2, ano2);
 
     const mesReferencia = periodo1.mes || periodo2.mes;
-
     if (!mesReferencia) {
-      console.log('⚠ Nenhum mês identificado, retornando lista vazia.');
       return res.json({ escalas: [], nome1, nome2, mesReferencia });
     }
 
@@ -142,3 +140,22 @@ app.post('/comparar', async (req, res) => {
 
     const flightTotal1 = somarHoras(texto1);
     const flightTotal2 = somarHoras(texto2);
+
+    res.json({
+      escalas: resultado,
+      nome1,
+      nome2,
+      mes1: periodo1.mes,
+      mes2: periodo2.mes,
+      flightTotal1,
+      flightTotal2
+    });
+  } catch (erro) {
+    console.error('Erro na comparação:', erro);
+    res.status(500).json({ mensagem: 'Erro interno ao comparar escalas.' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});

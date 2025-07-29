@@ -5,33 +5,51 @@
   <title>Comparador de Escalas</title>
   <style>
     @media print {
-      form, h1, button {
+      form, button {
         display: none;
       }
+      h1 {
+        text-align: center;
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
       body {
-        margin: 0;
-        padding: 0;
-        font-size: 8px;
+        margin: 10px;
+        font-size: 10px;
+        font-family: Arial, sans-serif;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       table {
         width: 100%;
-        font-size: 8px;
         border-collapse: collapse;
+        font-size: 10px;
       }
-      td, th {
-        padding: 2px 4px;
+      th {
+        background-color: #f2f2f2;
+        font-size: 11px;
+        padding: 6px 8px;
+      }
+      td {
+        padding: 6px 8px;
         border: 1px solid #ccc;
         vertical-align: top;
       }
+      tr.folga {
+        background-color: #e0e0e0 !important;
+      }
+      tr.sem-escala {
+        background-color: #fdd9e0 !important;
+      }
       .escala-bloco span {
-        font-size: 7.5px;
+        font-size: 9px;
       }
       .sem-escala {
-        font-size: 7.5px;
         color: #999;
+        font-size: 9px;
+        font-style: italic;
       }
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -43,6 +61,7 @@
     }
     th {
       background-color: #f2f2f2;
+      font-size: 16px;
     }
     .sem-escala {
       color: gray;
@@ -51,10 +70,13 @@
     .folga {
       background-color: #e0e0e0;
     }
+    tr.sem-escala {
+      background-color: #ffe6e6;
+    }
   </style>
 </head>
 <body>
-  <h1>Comparar Escalas de Tripulantes</h1>
+  <h1 id="titulo">Comparar Escalas de Tripulantes</h1>
 
   <form id="formulario" enctype="multipart/form-data">
     <label>Escala 1 (PDF):</label><br>
@@ -87,9 +109,32 @@
       const dados = await resposta.json();
       console.log('Dados recebidos do servidor:', dados);
 
+      // Atualizar título com mês por extenso
+      const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      const titulo = document.getElementById('titulo');
+      if (dados.mes1) {
+        const mesExtenso = meses[parseInt(dados.mes1, 10) - 1];
+        titulo.innerText = `Comparador de Escalas – ${mesExtenso}`;
+      }
+
+      if (dados.mes1 && dados.mes2 && dados.mes1 !== dados.mes2) {
+        const continuar = confirm("As escalas são de meses diferentes. Deseja continuar mesmo assim?");
+        if (!continuar) {
+          resultado.innerHTML = "<p>Comparação cancelada pelo usuário.</p>";
+          return;
+        }
+      }
+
       if (!dados.escalas || !Array.isArray(dados.escalas)) {
         resultado.innerHTML = '<p>Não foi possível exibir as escalas.</p>';
         return;
+      }
+
+      function ehSoFolga(texto) {
+        return (
+          texto.includes('off') &&
+          !/(AD\s?\d+|Apresentação|Release|Hotel|Reserva|Ground)/i.test(texto)
+        );
       }
 
       let html = '<table>';
@@ -106,8 +151,12 @@
         const textoEscala1 = item.escala1.toLowerCase();
         const textoEscala2 = item.escala2.toLowerCase();
 
-        const ambosFolga = textoEscala1.includes('off') && textoEscala2.includes('off');
-        const rowClass = ambosFolga ? 'folga' : '';
+        const ambosFolga = ehSoFolga(textoEscala1) && ehSoFolga(textoEscala2);
+        const umFolgaOutroSemEscala =
+          (ehSoFolga(textoEscala1) && (!textoEscala2 || textoEscala2.trim() === '')) ||
+          (ehSoFolga(textoEscala2) && (!textoEscala1 || textoEscala1.trim() === ''));
+
+        const rowClass = ambosFolga ? 'folga' : (umFolgaOutroSemEscala ? 'sem-escala' : '');
 
         html += `
           <tr class="${rowClass}">
@@ -118,7 +167,12 @@
         `;
       });
 
-      html += '</table>';
+      html = `
+        <p style="font-weight: bold; font-size: 12px; margin-bottom: 10px;">
+          ${dados.nome1}: ${dados.flightTotal1} | ${dados.nome2}: ${dados.flightTotal2}
+        </p>
+      ` + html;
+
       resultado.innerHTML = html;
     });
 
