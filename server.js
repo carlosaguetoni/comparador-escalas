@@ -159,3 +159,9 @@ app.post('/comparar', async (req, res) => {
     res.status(500).json({ mensagem: 'Erro interno ao comparar escalas.' });
   }
 });
+
+const path = require('path');
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
