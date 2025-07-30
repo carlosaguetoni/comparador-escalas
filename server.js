@@ -9,6 +9,10 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3333;
 
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
+
 app.use(fileUpload());
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
@@ -154,8 +158,4 @@ app.post('/comparar', async (req, res) => {
     console.error('Erro na comparação:', erro);
     res.status(500).json({ mensagem: 'Erro interno ao comparar escalas.' });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
 });
