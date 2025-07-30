@@ -5,7 +5,7 @@ const path = require('path');
 const app = express();
 
 app.use(fileUpload());
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname)));
 
 const PORT = process.env.PORT || 3333;
 
