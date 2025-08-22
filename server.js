@@ -173,31 +173,55 @@ function extrairDias(texto) {
   return dias;
 }
 
+// Soma apenas os tempos "Flight Time: HH:MM"
 function somarHorasVoos(texto) {
-  // só soma voos ADxxxx com janela hh:mm - hh:mm
-  const linhasVoo = texto.match(/AD\s?\d+.*?\d{2}:\d{2}\s*-\s*\d{2}:\d{2}.*$/g);
+  // Normaliza traços e espaços especiais para evitar falhas de regex
+  const norm = texto
+    .replace(/\r/g, '')
+    .replace(/\u00A0/g, ' ')   // NBSP -> espaço normal
+    .replace(/[–—‑]/g, '-')    // en/em dash e non-breaking hyphen -> '-'
+    .replace(/[ \t]+/g, ' ');  // múltiplos espaços -> 1
+
   let totalMin = 0;
+  let count = 0;
 
-  if (linhasVoo) {
-    linhasVoo.forEach((l) => {
-      const m = l.match(/(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2})/);
+  // 1) Preferência: somar Flight Time que estejam "próximos" de um voo ADxxxx
+  //    (isso evita somar algum resumo mensal, se existir)
+  const blocos = norm.match(/AD\s?\d+[\s\S]*?(?:\n{2,}|(?=AD\s?\d+)|$)/gi) || [];
+
+  blocos.forEach(bloco => {
+    const fts = bloco.match(/Flight\s*Time:\s*(\d{1,2}):(\d{2})/gi);
+    if (!fts) return;
+    fts.forEach(ft => {
+      const m = ft.match(/(\d{1,2}):(\d{2})/);
       if (!m) return;
-      const h1 = parseInt(m[1], 10), m1 = parseInt(m[2], 10);
-      const h2 = parseInt(m[3], 10), m2 = parseInt(m[4], 10);
+      const h = parseInt(m[1], 10);
+      const mm = parseInt(m[2], 10);
+      totalMin += h * 60 + mm;
+      count++;
+    });
+  });
 
-      let a = h1 * 60 + m1;
-      let b = h2 * 60 + m2;
-      if (b < a) b += 24 * 60; // vira o dia
-
-      totalMin += (b - a);
+  // 2) Fallback: se por algum motivo não achamos blocos com AD (formato diferente),
+  //    some todos os "Flight Time: HH:MM" do PDF
+  if (count === 0) {
+    const all = norm.match(/Flight\s*Time:\s*(\d{1,2}):(\d{2})/gi) || [];
+    all.forEach(ft => {
+      const m = ft.match(/(\d{1,2}):(\d{2})/);
+      if (!m) return;
+      const h = parseInt(m[1], 10);
+      const mm = parseInt(m[2], 10);
+      totalMin += h * 60 + mm;
+      count++;
     });
   }
 
-  const h = Math.floor(totalMin / 60);
-  const min = totalMin % 60;
-  return `${h}h ${String(min).padStart(2, '0')}min`;
-}
+  console.log('[somarHorasVoos] Flight Time encontrados:', count, 'Total (min):', totalMin);
 
+  const horas = Math.floor(totalMin / 60);
+  const minutos = totalMin % 60;
+  return `${horas}h ${String(minutos).padStart(2, '0')}min`;
+}
 // ----------------------- Start -----------------------
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
